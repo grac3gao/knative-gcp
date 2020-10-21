@@ -47,6 +47,9 @@ const (
 // TODO we should refactor this and reduce the number of environment variables.
 //  most of them are due to metrics, which has to change anyways.
 type envConfig struct {
+	// Environment variable containing the port for the receive_adapter.
+	Port int `envconfig:"PORT" default:"8080"`
+
 	// Environment variable containing project id.
 	Project string `envconfig:"PROJECT_ID"`
 
@@ -174,6 +177,7 @@ func main() {
 	}
 
 	adapter, err := InitializeAdapter(ctx,
+		clients.Port(env.Port),
 		clients.MaxConnsPerHost(maxConnectionsPerHost),
 		clients.ProjectID(projectID),
 		SubscriptionID(env.Subscription),

@@ -14,11 +14,12 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeAdapter(ctx context.Context, maxConnsPerHost clients.MaxConnsPerHost, projectID clients.ProjectID, subscriptionID adapter.SubscriptionID, namespace adapter.Namespace, name adapter.Name, resourceGroup adapter.ResourceGroup, args *adapter.AdapterArgs) (*adapter.Adapter, error) {
+func InitializeAdapter(ctx context.Context, port clients.Port, maxConnsPerHost clients.MaxConnsPerHost, projectID clients.ProjectID, subscriptionID adapter.SubscriptionID, namespace adapter.Namespace, name adapter.Name, resourceGroup adapter.ResourceGroup, args *adapter.AdapterArgs) (*adapter.Adapter, error) {
 	client, err := clients.NewPubsubClient(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
+	httpMessageReceiver := clients.NewHTTPMessageReceiver(port)
 	subscription := adapter.NewPubSubSubscription(ctx, client, subscriptionID)
 	httpClient := clients.NewHTTPClient(ctx, maxConnsPerHost)
 	converter := converters.NewPubSubConverter()
@@ -26,6 +27,6 @@ func InitializeAdapter(ctx context.Context, maxConnsPerHost clients.MaxConnsPerH
 	if err != nil {
 		return nil, err
 	}
-	adapterAdapter := adapter.NewAdapter(ctx, projectID, namespace, name, resourceGroup, subscription, httpClient, converter, statsReporter, args)
+	adapterAdapter := adapter.NewAdapter(ctx, projectID, namespace, name, resourceGroup, subscription, httpMessageReceiver, httpClient, converter, statsReporter, args)
 	return adapterAdapter, nil
 }

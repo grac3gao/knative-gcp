@@ -22,6 +22,7 @@ type SubscriptionID string
 // AdapterSet provides an adapter with a PubSub client and HTTP client.
 var AdapterSet wire.ProviderSet = wire.NewSet(
 	NewAdapter,
+	clients.NewHTTPMessageReceiver,
 	clients.NewPubsubClient,
 	NewPubSubSubscription,
 	converters.NewPubSubConverter,

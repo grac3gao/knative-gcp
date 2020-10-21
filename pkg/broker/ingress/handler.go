@@ -18,7 +18,10 @@ package ingress
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	nethttp "net/http"
 	"time"
 
@@ -28,6 +31,7 @@ import (
 	ceclient "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/coreos/go-oidc"
 	"github.com/google/knative-gcp/pkg/logging"
 	"github.com/google/knative-gcp/pkg/metrics"
 	"github.com/google/knative-gcp/pkg/tracing"
@@ -36,6 +40,7 @@ import (
 	"go.opencensus.io/resource"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/support/bundler"
 	grpccode "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -60,6 +65,12 @@ const (
 
 	// For probes.
 	heathCheckPath = "/healthz"
+
+	// For userinfo.
+	scope = "https://www.googleapis.com/auth/userinfo.email"
+
+	// URL identifier for the service.
+	issuer = "https://accounts.google.com"
 
 	// for permission denied error msg
 	// TODO(cathyzhyi) point to official doc rather than github doc
@@ -120,14 +131,37 @@ func (h *Handler) Start(ctx context.Context) error {
 // 3. Convert request to event.
 // 4. Send event to decouple sink.
 func (h *Handler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
-	if request.URL.Path == heathCheckPath {
-		response.WriteHeader(nethttp.StatusOK)
-		return
-	}
 	ctx := request.Context()
 	ctx = logging.WithLogger(ctx, h.logger)
 	ctx = tracing.WithLogging(ctx, trace.FromContext(ctx))
 	logging.FromContext(ctx).Debug("Serving http", zap.Any("headers", request.Header))
+
+	if request.URL.Path == heathCheckPath {
+		logging.FromContext(ctx).Debug("have a readiness check")
+		ctx := request.Context()
+		cred, err := google.FindDefaultCredentials(ctx, scope)
+		if err != nil {
+			fmt.Printf("failed. cred")
+		}
+
+		provider, err := oidc.NewProvider(ctx, issuer)
+		if err != nil {
+			fmt.Printf("failed. provider")
+		}
+		userInfo, err := provider.UserInfo(ctx, cred.TokenSource)
+		if err != nil || !userInfo.EmailVerified {
+			b, _ := json.Marshal(map[string]interface{}{
+				"error": err.Error(),
+			})
+			ioutil.WriteFile("/dev/termination-log", b, 0644)
+			fmt.Printf("failed")
+			response.WriteHeader(nethttp.StatusUnauthorized)
+			return
+		}
+		response.WriteHeader(nethttp.StatusOK)
+		return
+	}
+
 	if request.Method != nethttp.MethodPost {
 		response.WriteHeader(nethttp.StatusMethodNotAllowed)
 		return

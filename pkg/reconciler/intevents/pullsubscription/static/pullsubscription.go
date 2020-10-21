@@ -18,17 +18,18 @@ package static
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
-
-	v1 "github.com/google/knative-gcp/pkg/apis/intevents/v1"
-	pullsubscriptionreconciler "github.com/google/knative-gcp/pkg/client/injection/reconciler/intevents/v1/pullsubscription"
-	psreconciler "github.com/google/knative-gcp/pkg/reconciler/intevents/pullsubscription"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
+
+	v1 "github.com/google/knative-gcp/pkg/apis/intevents/v1"
+	pullsubscriptionreconciler "github.com/google/knative-gcp/pkg/client/injection/reconciler/intevents/v1/pullsubscription"
+	psreconciler "github.com/google/knative-gcp/pkg/reconciler/intevents/pullsubscription"
 )
 
 // Reconciler implements controller.Reconciler for PullSubscription resources.
@@ -58,7 +59,29 @@ func (r *Reconciler) ReconcileDeployment(ctx context.Context, ra *appsv1.Deploym
 		}
 	}
 
-	src.Status.PropagateDeploymentAvailability(existing)
+	if minimumReplicasUnavailable := src.Status.PropagateDeploymentAvailability(existing); minimumReplicasUnavailable {
+		logging.FromContext(ctx).Desugar().Error("minimumreolicasUnavalibel detected", zap.Error(err))
+		podList, _ := r.Base.GetPods(ctx, src, ra)
+		if podList != nil {
+			for _, pod := range podList.Items {
+				eventList, _ := r.KubeClientSet.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name)})
+				for _, event := range eventList.Items {
+					logging.FromContext(ctx).Desugar().Info("get the event " + event.Name + event.Type)
+					if event.Reason == "FailedMount" {
+						src.Status.MarkDeployedFailed("AuthenticationCheckFailed", event.Message)
+						return nil
+					}
+				}
+				for _, cs := range pod.Status.ContainerStatuses {
+					if cs.LastTerminationState.Terminated != nil {
+						src.Status.MarkDeployedFailed("AuthenticationCheckFailed", cs.LastTerminationState.Terminated.Message)
+						return nil
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

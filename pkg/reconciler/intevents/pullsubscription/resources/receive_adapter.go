@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmeta"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/google/knative-gcp/pkg/apis/intevents"
 	intereventsv1 "github.com/google/knative-gcp/pkg/apis/intevents/v1"
+	"github.com/google/knative-gcp/pkg/broker/handler"
 	"github.com/google/knative-gcp/pkg/pubsub/adapter/converters"
 	"github.com/google/knative-gcp/pkg/utils"
 
@@ -110,6 +112,19 @@ func makeReceiveAdapterPodSpec(ctx context.Context, args *ReceiveAdapterArgs) *c
 				corev1.ResourceCPU:    resource.MustParse("400m"),
 			},
 		},
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt(handler.DefaultHealthCheckPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			FailureThreshold: 3,
+			PeriodSeconds:    15,
+			SuccessThreshold: 1,
+			TimeoutSeconds:   5,
+		},
 		Env: []corev1.EnvVar{{
 			Name:  "PROJECT_ID",
 			Value: args.PullSubscription.Spec.Project,
@@ -156,6 +171,9 @@ func makeReceiveAdapterPodSpec(ctx context.Context, args *ReceiveAdapterArgs) *c
 		Ports: []corev1.ContainerPort{{
 			Name:          "metrics",
 			ContainerPort: 9090,
+		}, {
+			Name:          "http",
+			ContainerPort: 8080,
 		}},
 	}
 

@@ -9,6 +9,7 @@ require (
 	cloud.google.com/go/storage v1.10.0
 	github.com/cloudevents/sdk-go/protocol/pubsub/v2 v2.2.1-0.20200806165906-9ae0708e27fa
 	github.com/cloudevents/sdk-go/v2 v2.3.1
+	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.5.2
@@ -20,6 +21,7 @@ require (
 	go.opencensus.io v0.22.5-0.20200714042313-af30f77c5f65
 	go.uber.org/multierr v1.5.0
 	go.uber.org/zap v1.15.0
+	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/api v0.32.0
 	google.golang.org/genproto v0.0.0-20200929141702-51c3e5b607fe

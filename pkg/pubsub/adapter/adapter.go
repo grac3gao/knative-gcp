@@ -18,24 +18,40 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	nethttp "net/http"
-
-	"go.uber.org/zap"
 
 	"cloud.google.com/go/pubsub"
 	cev2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/extensions"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/coreos/go-oidc"
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+	"golang.org/x/oauth2/google"
+	"k8s.io/apimachinery/pkg/types"
+	kntracing "knative.dev/eventing/pkg/tracing"
+
 	"github.com/google/knative-gcp/pkg/apis/messaging"
 	"github.com/google/knative-gcp/pkg/logging"
 	. "github.com/google/knative-gcp/pkg/pubsub/adapter/context"
 	"github.com/google/knative-gcp/pkg/pubsub/adapter/converters"
 	"github.com/google/knative-gcp/pkg/tracing"
 	"github.com/google/knative-gcp/pkg/utils/clients"
-	"go.opencensus.io/trace"
-	"k8s.io/apimachinery/pkg/types"
-	kntracing "knative.dev/eventing/pkg/tracing"
+)
+
+const (
+	// For probes.
+	heathCheckPath = "/healthz"
+
+	// For userinfo.
+	scope = "https://www.googleapis.com/auth/userinfo.email"
+
+	// URL identifier for the service.
+	issuer = "https://accounts.google.com"
 )
 
 // AdapterArgs has a bundle of arguments needed to create an Adapter.
@@ -62,6 +78,9 @@ type AdapterArgs struct {
 type Adapter struct {
 	// subscription is the pubsub subscription used to receive messages from pubsub.
 	subscription *pubsub.Subscription
+
+	// inbound is the client used to receive http request, for readiness check.
+	inbound HttpMessageReceiver
 
 	// outbound is the client used to send events to.
 	outbound *nethttp.Client
@@ -90,6 +109,11 @@ type Adapter struct {
 	logger *zap.Logger
 }
 
+// HttpMessageReceiver is an interface to listen on http requests.
+type HttpMessageReceiver interface {
+	StartListen(ctx context.Context, handler nethttp.Handler) error
+}
+
 // NewAdapter creates a new adapter.
 func NewAdapter(
 	ctx context.Context,
@@ -98,6 +122,7 @@ func NewAdapter(
 	name Name,
 	resourceGroup ResourceGroup,
 	subscription *pubsub.Subscription,
+	inbound HttpMessageReceiver,
 	outbound *nethttp.Client,
 	converter converters.Converter,
 	reporter StatsReporter,
@@ -107,6 +132,7 @@ func NewAdapter(
 		projectID:      string(projectID),
 		namespacedName: types.NamespacedName{Namespace: string(namespace), Name: string(name)},
 		resourceGroup:  string(resourceGroup),
+		inbound:        inbound,
 		outbound:       outbound,
 		converter:      converter,
 		reporter:       reporter,
@@ -122,6 +148,9 @@ func (a *Adapter) Start(ctx context.Context) error {
 	ctx = WithProjectKey(ctx, a.projectID)
 	ctx = WithTopicKey(ctx, a.args.TopicID)
 	ctx = WithSubscriptionKey(ctx, a.subscription.ID())
+	go func() {
+		a.inbound.StartListen(ctx, a)
+	}()
 
 	return a.subscription.Receive(ctx, a.receive)
 }
@@ -129,6 +158,34 @@ func (a *Adapter) Start(ctx context.Context) error {
 // Stop stops the adapter.
 func (a *Adapter) Stop() {
 	a.cancel()
+}
+
+func (a *Adapter) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	if request.URL.Path == heathCheckPath {
+		a.logger.Debug("have a readiness check")
+		ctx := request.Context()
+		cred, err := google.FindDefaultCredentials(ctx, scope)
+		if err != nil {
+			fmt.Printf("failed. cred")
+		}
+
+		provider, err := oidc.NewProvider(ctx, issuer)
+		if err != nil {
+			fmt.Printf("failed. provider")
+		}
+		userInfo, err := provider.UserInfo(ctx, cred.TokenSource)
+		if err != nil || !userInfo.EmailVerified {
+			b, _ := json.Marshal(map[string]interface{}{
+				"error": err.Error(),
+			})
+			ioutil.WriteFile("/dev/termination-log", b, 0644)
+			fmt.Printf("failed")
+			response.WriteHeader(nethttp.StatusUnauthorized)
+			return
+		}
+	}
+	response.WriteHeader(nethttp.StatusOK)
+	return
 }
 
 // TODO refactor this method. As our RA code is used both for Sources and our Channel, it also supports replies

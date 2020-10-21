@@ -342,6 +342,21 @@ func (r *Base) GetOrCreateReceiveAdapter(ctx context.Context, desired *appsv1.De
 	return existing, nil
 }
 
+func (r *Base) GetPods(ctx context.Context, ps *v1.PullSubscription, d *appsv1.Deployment) (*corev1.PodList, error) {
+	pl, err := r.KubeClientSet.CoreV1().Pods(ps.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: resources.GetLabelSelector(r.ControllerAgentName, ps.Name).String(),
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Pod",
+		},
+	})
+	if err != nil {
+		logging.FromContext(ctx).Desugar().Error("Unable to list pod", zap.Error(err))
+		return nil, err
+	}
+	return pl, nil
+}
+
 func (r *Base) getReceiveAdapter(ctx context.Context, ps *v1.PullSubscription) (*appsv1.Deployment, error) {
 	dl, err := r.KubeClientSet.AppsV1().Deployments(ps.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: resources.GetLabelSelector(r.ControllerAgentName, ps.Name).String(),

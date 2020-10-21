@@ -17,6 +17,7 @@ kind: Pod
 metadata:
   name: sender
 spec:
+  serviceAccountName: ksa
   containers:
     - name: sender
       image: ko://github.com/google/knative-gcp/test/test_images/sender
