@@ -29,4 +29,6 @@ type IamClient interface {
 	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest) (*iam.Policy, error)
 	// SetIamPolicy see https://pkg.go.dev/cloud.google.com/go/iam/admin/apiv1?tab=doc#IamClient.SetIamPolicy
 	SetIamPolicy(ctx context.Context, req *admin.SetIamPolicyRequest) (*iam.Policy, error)
+	// TestPermissions see https://godoc.org/cloud.google.com/go/iam#Handle.TestPermissions
+	TestPermissions(ctx context.Context, permissions []string) ([]string, error)
 }

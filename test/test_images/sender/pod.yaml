@@ -17,8 +17,18 @@ kind: Pod
 metadata:
   name: sender
 spec:
-  serviceAccountName: ksa
+  serviceAccountName: ksa-ubermint
   containers:
     - name: sender
       image: ko://github.com/google/knative-gcp/test/test_images/sender
+#      env:
+#      - name: GOOGLE_APPLICATION_CREDENTIALS
+#        value: /var/secrets/google/key.json
+#      volumeMounts:
+#      - name: google-cloud-key
+#        mountPath: /var/secrets/google
+#  volumes:
+#  - name: google-cloud-key
+#    secret:
+#      secretName: test-secret
 

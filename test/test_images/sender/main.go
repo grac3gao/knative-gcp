@@ -20,8 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coreos/go-oidc"
-	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudresourcemanager/v1"
+
+	metadataClient "github.com/google/knative-gcp/pkg/gclient/metadata"
+	"github.com/google/knative-gcp/pkg/utils"
 )
 
 type envConfig struct {
@@ -41,28 +43,49 @@ type envConfig struct {
 //}
 
 func main() {
-	scope := "https://www.googleapis.com/auth/userinfo.email"
-	scope1 := "https://www.googleapis.com/auth/cloud-platform"
-	ctx := context.Background()
-	cred, err := google.FindDefaultCredentials(ctx, scope, scope1)
-	if err != nil {
-		fmt.Printf("Unable to get token: %v ", err)
-	} else {
-		s, _ := cred.TokenSource.Token()
-		fmt.Printf("Get the token: %v ", s.AccessToken)
-	}
-
+	//scope := "https://www.googleapis.com/auth/userinfo.email"
+	//scope1 := "https://www.googleapis.com/auth/cloud-platform"
+	//ctx := context.Background()
+	//cred, err := google.FindDefaultCredentials(ctx, scope, scope1)
+	//if err != nil {
+	//	fmt.Printf("Unable to get token: %v ", err)
+	//} else {
+	//	s, _ := cred.TokenSource.Token()
+	//	fmt.Printf("Get the token: %v ", s.AccessToken)
+	//}
 	//
-	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
-	if err != nil {
-		fmt.Printf("Unable to get provider: %v ", err)
+	//cred, err = google.FindDefaultCredentials(ctx, scope, scope1)
+	//if err != nil {
+	//	fmt.Printf("Unable to get token: %v ", err)
+	//} else {
+	//	s, _ := cred.TokenSource.Token()
+	//	fmt.Printf("Get the token: %v ", s.Valid())
+	//}
+	//ctx := context.Background()
+	//v := ClientOptions()
+	//iamClient, _ := admin.NewIamClient(ctx, v...)
+	//projectId, _ := utils.ProjectID("", metadataClient.NewDefaultMetadataClient())
+	//p, err := iamClient.TestIamPermissions(ctx, &iam.TestIamPermissionsRequest{
+	//	Resource: admin.IamProjectPath(projectId),
+	//	Permissions: []string{"pubsub.topics.publish"},
+	//})
+	//if err != nil {
+	//	fmt.Printf("failed to test iam permissions" + err.Error())
+	//} else {
+	//	fmt.Printf("%v", p)
+	//}
+	ctx := context.Background()
+	cloudresourcemanagerService, err := cloudresourcemanager.NewService(ctx)
+	projectId, _ := utils.ProjectID("", metadataClient.NewDefaultMetadataClient())
+
+	rb := &cloudresourcemanager.TestIamPermissionsRequest{
+		Permissions: []string{"pubsub.topics.publish"},
 	}
-	fmt.Printf("%v ", provider)
-	userInfo, err := provider.UserInfo(ctx, cred.TokenSource)
+	resp, err := cloudresourcemanagerService.Projects.TestIamPermissions(projectId, rb).Context(ctx).Do()
 	if err != nil {
-		fmt.Printf("Unable to get userInfo: %v ", err)
+		fmt.Printf("failed to test iam permissions" + err.Error())
 	} else {
-		fmt.Printf("Get the userInfo: %v", userInfo.EmailVerified)
+		fmt.Printf("%v", resp)
 	}
 
 	//var env envConfig
@@ -146,4 +169,8 @@ func main() {
 //		}
 //	}
 //	return false
+//}
+
+//func ClientOptions() []option.ClientOption {
+//	return nil
 //}

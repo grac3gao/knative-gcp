@@ -457,6 +457,7 @@ golang.org/x/xerrors/internal
 gomodules.xyz/jsonpatch/v2
 # google.golang.org/api v0.32.0
 ## explicit
+google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/container/v1beta1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
