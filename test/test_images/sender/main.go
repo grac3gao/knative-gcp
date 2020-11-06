@@ -19,11 +19,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
-	"google.golang.org/api/cloudresourcemanager/v1"
-
-	metadataClient "github.com/google/knative-gcp/pkg/gclient/metadata"
-	"github.com/google/knative-gcp/pkg/utils"
+	"golang.org/x/oauth2/google"
 )
 
 type envConfig struct {
@@ -43,50 +42,64 @@ type envConfig struct {
 //}
 
 func main() {
-	//scope := "https://www.googleapis.com/auth/userinfo.email"
-	//scope1 := "https://www.googleapis.com/auth/cloud-platform"
-	//ctx := context.Background()
-	//cred, err := google.FindDefaultCredentials(ctx, scope, scope1)
-	//if err != nil {
-	//	fmt.Printf("Unable to get token: %v ", err)
-	//} else {
-	//	s, _ := cred.TokenSource.Token()
-	//	fmt.Printf("Get the token: %v ", s.AccessToken)
-	//}
-	//
-	//cred, err = google.FindDefaultCredentials(ctx, scope, scope1)
-	//if err != nil {
-	//	fmt.Printf("Unable to get token: %v ", err)
-	//} else {
-	//	s, _ := cred.TokenSource.Token()
-	//	fmt.Printf("Get the token: %v ", s.Valid())
-	//}
-	//ctx := context.Background()
+
+	resource := "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
+	req, err := http.NewRequest("GET", resource, nil)
+	if err != nil {
+		// handle err
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		// handle err
+	}
+	defer resp.Body.Close()
+
+	data, _ := ioutil.ReadAll(resp.Body)
+	s := string(data)
+
+	fmt.Printf("Get the resp: %v ", s)
+
+	scope := "https://www.googleapis.com/auth/cloud-platform"
+	ctx := context.Background()
+	cred, err := google.FindDefaultCredentials(ctx, scope)
+	if err != nil {
+		fmt.Printf("Unable to get token: %v ", err)
+	} else {
+		s, _ := cred.TokenSource.Token()
+		fmt.Printf("Get the token: %v ", s.Valid())
+	}
+
+	//"https://accounts.google.com"
 	//v := ClientOptions()
-	//iamClient, _ := admin.NewIamClient(ctx, v...)
+	//provider, err := oidc.NewProvider(ctx, "https://container.googleapis.com/v1/projects/gracegao-knative-testing/locations/us-west2/clusters/knative-5")
+	//if err != nil {
+	//	fmt.Printf("Unable to get provider: %v ", err)
+	//}
+	//fmt.Printf("%v ", provider)
+	//userInfo, err := provider.UserInfo(ctx, cred.TokenSource)
+	//if err != nil {
+	//	fmt.Printf("Unable to get userInfo: %v ", err)
+	//} else {
+	//	fmt.Printf("Get the userInfo: %v", userInfo.EmailVerified)
+	//}
+
+	//req, err := http.NewRequest("POST", p.userInfoURL, nil)
+
+	//ctx := context.Background()
+	//cloudresourcemanagerService, err := cloudresourcemanager.NewService(ctx)
 	//projectId, _ := utils.ProjectID("", metadataClient.NewDefaultMetadataClient())
-	//p, err := iamClient.TestIamPermissions(ctx, &iam.TestIamPermissionsRequest{
-	//	Resource: admin.IamProjectPath(projectId),
+	//
+	//rb := &cloudresourcemanager.TestIamPermissionsRequest{
 	//	Permissions: []string{"pubsub.topics.publish"},
-	//})
+	//}
+	//resp, err := cloudresourcemanagerService.Projects.TestIamPermissions(projectId, rb).Context(ctx).Do()
 	//if err != nil {
 	//	fmt.Printf("failed to test iam permissions" + err.Error())
 	//} else {
-	//	fmt.Printf("%v", p)
+	//	fmt.Printf("%v", resp.Permissions)
 	//}
-	ctx := context.Background()
-	cloudresourcemanagerService, err := cloudresourcemanager.NewService(ctx)
-	projectId, _ := utils.ProjectID("", metadataClient.NewDefaultMetadataClient())
-
-	rb := &cloudresourcemanager.TestIamPermissionsRequest{
-		Permissions: []string{"pubsub.topics.publish"},
-	}
-	resp, err := cloudresourcemanagerService.Projects.TestIamPermissions(projectId, rb).Context(ctx).Do()
-	if err != nil {
-		fmt.Printf("failed to test iam permissions" + err.Error())
-	} else {
-		fmt.Printf("%v", resp)
-	}
 
 	//var env envConfig
 	//if err := envconfig.Process("", &env); err != nil {
