@@ -181,6 +181,7 @@ func (a *Adapter) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Re
 			ioutil.WriteFile("/dev/termination-log", b, 0644)
 			fmt.Printf("failed")
 			response.WriteHeader(nethttp.StatusUnauthorized)
+			response.Write(b)
 			return
 		}
 	}

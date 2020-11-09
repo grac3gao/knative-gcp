@@ -19,6 +19,7 @@ package static
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -64,6 +65,7 @@ func (r *Reconciler) ReconcileDeployment(ctx context.Context, ra *appsv1.Deploym
 		podList, _ := r.Base.GetPods(ctx, src, ra)
 		if podList != nil {
 			for _, pod := range podList.Items {
+				logging.FromContext(ctx).Desugar().Info("current pod is : " + pod.Name)
 				eventList, _ := r.KubeClientSet.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name)})
 				for _, event := range eventList.Items {
 					logging.FromContext(ctx).Desugar().Info("get the event " + event.Name + event.Type)
@@ -73,9 +75,13 @@ func (r *Reconciler) ReconcileDeployment(ctx context.Context, ra *appsv1.Deploym
 					}
 				}
 				for _, cs := range pod.Status.ContainerStatuses {
-					if cs.LastTerminationState.Terminated != nil {
-						src.Status.MarkDeployedFailed("AuthenticationCheckFailed", cs.LastTerminationState.Terminated.Message)
+					logging.FromContext(ctx).Desugar().Info("current pod's cs is : " + cs.Name)
+					logging.FromContext(ctx).Desugar().Info(fmt.Sprintf("current pod's cs is : %v", cs.State))
+					if cs.State.Terminated != nil && strings.Contains(cs.State.Terminated.Message, "auth") {
+						src.Status.MarkDeployedFailed("AuthenticationCheckFailed", cs.State.Terminated.Message)
 						return nil
+					} else if cs.LastTerminationState.Terminated != nil && strings.Contains(cs.LastTerminationState.Terminated.Message, "auth") {
+						src.Status.MarkDeployedFailed("AuthenticationCheckFailed", cs.LastTerminationState.Terminated.Message)
 					}
 				}
 			}

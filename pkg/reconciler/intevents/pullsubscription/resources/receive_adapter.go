@@ -112,7 +112,7 @@ func makeReceiveAdapterPodSpec(ctx context.Context, args *ReceiveAdapterArgs) *c
 				corev1.ResourceCPU:    resource.MustParse("400m"),
 			},
 		},
-		ReadinessProbe: &corev1.Probe{
+		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/healthz",
