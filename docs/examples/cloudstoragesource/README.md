@@ -80,7 +80,7 @@ Object Notifications for when a new object is added to Google Cloud Storage
 1. Update `serviceAccountName` / `secret` in the
    [`cloudstoragesource.yaml`](cloudstoragesource.yaml)
 
-   1. If you are in GKE and using
+   1. If you are in GKE and using non-default scenario of
       [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
       update `serviceAccountName` with the Kubernetes service account you
       created in

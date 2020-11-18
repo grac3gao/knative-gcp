@@ -123,14 +123,23 @@ Plane:
   1. `PROJECT_ID`: an optional parameter to specify the project to use, default to
      `gcloud config get-value project`.
 
-  Here is an example to run this script if you want to configure non-default Workload Identity
-  in namespace `example` with Kubernetes service account `example-ksa`:
+  **Example1:**
+  Configure non-default Workload Identity
+  in default namespace `default` with default Kubernetes service account `default-cre-dataplane`:
 
+  ```shell
+  ./hack/init_data_plane_gke.sh non-default
+  ```
+
+  **Example2:**
+  Configure non-default Workload Identity
+  in namespace `example` with Kubernetes service account `example-ksa`:
+  
   ```shell
   ./hack/init_data_plane_gke.sh non-default example example-ksa
   ```
 
-  After running the script, you will have a Kubernetes Service Account `example-ksa` in namespace `example`
+  After running the script, you will have a Kubernetes Service Account in desired namespace
   which is bound to the Google Cloud Service Account `cre-dataplane` (you just created it in the last step).
   Remember to put this Kubernetes Service Account name as the `spec.serviceAccountName`
   when you create resources in the
@@ -178,8 +187,8 @@ If the secret does not exist, the script will create it.
     to `gcloud config get-value project`. If you want to specify the parameter
     `PROJECT_ID` instead of using the default one.
 
-Here is an example to run this script if you want to configure authentication
-in namespace `example` with the default secret name `google-cloud-key`
+**Example1:**
+Configure authentication in namespace `example` with the default secret name `google-cloud-key`
 
 ```shell
 ./hack/init_data_plane.sh example

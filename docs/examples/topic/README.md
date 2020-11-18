@@ -23,7 +23,7 @@ construct used by higher-level objects, such as `Channel`.
 
 1. Update `googleServiceAccount` / `secret` in the [`topic.yaml`](topic.yaml)
 
-   1. If you are in GKE and using
+   1. If you are in GKE and using non-default scenario of
       [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
       update `serviceAccountName` with the Kubernetes service account you
       created in

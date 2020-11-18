@@ -18,7 +18,7 @@ intended to provide a durable messaging solution.
 1. Create the `Channel` in [channel.yaml](channel.yaml).
 
    1. If you are in GKE and using
-      [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
+      non-default scenario of [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
       update `serviceAccountName` with the Kubernetes service account you
       created in
       [Create a Service Account for the Data Plane](../../install/dataplane-service-account.md),

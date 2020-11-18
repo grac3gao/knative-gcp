@@ -26,7 +26,7 @@ Channel.
     [`config-br-default-channel`](config-br-default-channel.yaml) to use a
     different method and apply it. The two options are:
 
-    1.  If you are in GKE and using
+    1.  If you are in GKE and using non-default scenario of
         [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
         update `serviceAccountName` with the Pub/Sub enabled service account you
         created in

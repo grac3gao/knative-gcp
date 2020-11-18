@@ -19,7 +19,7 @@ events using a Push-compatible format.
    to update the `topic` in the [`CloudPubSubSource`](cloudpubsubsource.yaml)
    file.
 
-   1. If you are in GKE and using
+   1. If you are in GKE and using non-default scenario of
       [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity),
       update `serviceAccountName` with the Kubernetes service account you
       created in
