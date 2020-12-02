@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/knative-gcp/pkg/testing/testloggingutil"
+	"github.com/google/knative-gcp/pkg/utils/authcheck"
 
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
@@ -48,6 +49,9 @@ const (
 // TODO we should refactor this and reduce the number of environment variables.
 //  most of them are due to metrics, which has to change anyways.
 type envConfig struct {
+	// Environment variable containing the authType, which represents the authentication configuration mode the Pod is using.
+	AuthType authcheck.AuthTypes `envconfig:"K_GCP_AUTH_TYPE" default:""`
+
 	// Environment variable containing the sink URI.
 	Sink string `envconfig:"SINK_URI" required:"true"`
 

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package authcheck provides utilities to check authentication configuration for data plane resources.
+// File authtype contains functions to differentiate authentication mode.
 package authcheck
 
 import (

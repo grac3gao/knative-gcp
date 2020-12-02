@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/google/knative-gcp/pkg/logging"
+	"github.com/google/knative-gcp/pkg/utils/authcheck"
+
 	"go.uber.org/zap"
 )
 
@@ -41,6 +43,7 @@ type probeChecker struct {
 	lastReportTime   time.Time
 	maxStaleDuration time.Duration
 	port             int
+	authType         authcheck.AuthTypes
 }
 
 func (c *probeChecker) reportHealth() {
@@ -89,7 +92,9 @@ func (c *probeChecker) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	// Perform Authentication check. This is a best-effort check.
+	authcheck.AuthenticationCheck(req.Context(), c.authType, w)
 }
 
 // StartSyncPool starts the sync pool.
@@ -99,6 +104,7 @@ func StartSyncPool(
 	syncSignal <-chan struct{},
 	maxStaleDuration time.Duration,
 	probeCheckPort int,
+	authType authcheck.AuthTypes,
 ) (SyncPool, error) {
 
 	if err := syncPool.SyncOnce(ctx); err != nil {
@@ -107,6 +113,7 @@ func StartSyncPool(
 	c := &probeChecker{
 		maxStaleDuration: maxStaleDuration,
 		port:             probeCheckPort,
+		authType:         authType,
 	}
 	go c.start(ctx)
 	if syncSignal != nil {

@@ -28,10 +28,6 @@ import (
 	ceclient "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	"github.com/google/knative-gcp/pkg/logging"
-	"github.com/google/knative-gcp/pkg/metrics"
-	"github.com/google/knative-gcp/pkg/tracing"
-	"github.com/google/knative-gcp/pkg/utils/clients"
 	"github.com/google/wire"
 	"go.opencensus.io/resource"
 	"go.opencensus.io/trace"
@@ -43,6 +39,12 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	kntracing "knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/metrics/metricskey"
+
+	"github.com/google/knative-gcp/pkg/logging"
+	"github.com/google/knative-gcp/pkg/metrics"
+	"github.com/google/knative-gcp/pkg/tracing"
+	"github.com/google/knative-gcp/pkg/utils/authcheck"
+	"github.com/google/knative-gcp/pkg/utils/clients"
 )
 
 const (
@@ -97,15 +99,17 @@ type Handler struct {
 	decouple DecoupleSink
 	logger   *zap.Logger
 	reporter *metrics.IngressReporter
+	authType authcheck.AuthTypes
 }
 
 // NewHandler creates a new ingress handler.
-func NewHandler(ctx context.Context, httpReceiver HttpMessageReceiver, decouple DecoupleSink, reporter *metrics.IngressReporter) *Handler {
+func NewHandler(ctx context.Context, httpReceiver HttpMessageReceiver, decouple DecoupleSink, reporter *metrics.IngressReporter, authType authcheck.AuthTypes) *Handler {
 	return &Handler{
 		httpReceiver: httpReceiver,
 		decouple:     decouple,
 		reporter:     reporter,
 		logger:       logging.FromContext(ctx),
+		authType:     authType,
 	}
 }
 
@@ -120,11 +124,12 @@ func (h *Handler) Start(ctx context.Context) error {
 // 3. Convert request to event.
 // 4. Send event to decouple sink.
 func (h *Handler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	ctx := request.Context()
 	if request.URL.Path == heathCheckPath {
-		response.WriteHeader(nethttp.StatusOK)
+		// Perform Authentication check. This is a best-effort check.
+		authcheck.AuthenticationCheck(ctx, h.authType, response)
 		return
 	}
-	ctx := request.Context()
 	ctx = logging.WithLogger(ctx, h.logger)
 	ctx = tracing.WithLogging(ctx, trace.FromContext(ctx))
 	logging.FromContext(ctx).Debug("Serving http", zap.Any("headers", request.Header))
