@@ -37,11 +37,20 @@ type HTTPMessageReceiver struct {
 
 	server   *http.Server
 	listener net.Listener
+
+	checker  handlers.CustomizeChecker
 }
 
 func NewHTTPMessageReceiver(port int) *HTTPMessageReceiver {
 	return &HTTPMessageReceiver{
 		port: port,
+	}
+}
+
+func NewHTTPMessageReceiverWithChecker(port int, fn handlers.CustomizeChecker) *HTTPMessageReceiver{
+	return &HTTPMessageReceiver{
+		port: port,
+		checker: fn,
 	}
 }
 
@@ -54,6 +63,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 
 	drainer := &handlers.Drainer{
 		Inner: CreateHandler(handler),
+		CustomizeCheck: recv.checker,
 	}
 	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),

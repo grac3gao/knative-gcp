@@ -34,6 +34,8 @@ type sysTimer struct {
 	*time.Timer
 }
 
+type CustomizeChecker func(w http.ResponseWriter, req *http.Request)
+
 func (s *sysTimer) tickChan() <-chan time.Time {
 	return s.Timer.C
 }
@@ -56,6 +58,7 @@ type Drainer struct {
 	// Mutex guards the initialization and resets of the timer
 	sync.RWMutex
 
+	CustomizeCheck CustomizeChecker
 	// Inner is the http.Handler to which we delegate actual requests.
 	Inner http.Handler
 
@@ -79,6 +82,9 @@ func (d *Drainer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if d.draining() {
 			http.Error(w, "shutting down", http.StatusServiceUnavailable)
 		} else {
+			if d.CustomizeCheck != nil {
+				d.CustomizeCheck(w, r)
+			}
 			w.WriteHeader(http.StatusOK)
 		}
 		return
