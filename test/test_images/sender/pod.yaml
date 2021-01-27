@@ -17,7 +17,18 @@ kind: Pod
 metadata:
   name: sender
 spec:
+  serviceAccountName: kcc
   containers:
     - name: sender
       image: ko://github.com/google/knative-gcp/test/test_images/sender
+      env:
+        - name: DB_USER
+          value: "sqluser-mysql"
+        - name: DB_NAME
+          value: "sqldatabase-mysql"
+#    - name: cloud-sql-proxy
+#      image: gcr.io/cloudsql-docker/gce-proxy:1.17
+#      command:
+#        - "/cloud_sql_proxy"
+#        - "-instances=gracegao-knative-testing:us-central1:sqlinstance-mysql=tcp:3306"
 
