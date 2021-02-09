@@ -26,9 +26,9 @@ spec:
           value: "sqluser-mysql"
         - name: DB_NAME
           value: "sqldatabase-mysql"
-#    - name: cloud-sql-proxy
-#      image: gcr.io/cloudsql-docker/gce-proxy:1.17
-#      command:
-#        - "/cloud_sql_proxy"
-#        - "-instances=gracegao-knative-testing:us-central1:sqlinstance-mysql=tcp:3306"
+    - name: cloud-sql-proxy
+      image: gcr.io/cloudsql-docker/gce-proxy:1.17
+      command:
+        - "/cloud_sql_proxy"
+        - "-instances=gracegao-knative-testing:us-central1:sqlinstance-mysql=tcp:3306"
 

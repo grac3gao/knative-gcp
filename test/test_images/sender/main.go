@@ -17,11 +17,10 @@ limitations under the License.
 package main
 
 import (
-	//"database/sql"
+	"database/sql"
 	"fmt"
-	"time"
 
-	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	//"time"
 	//
 	//"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
@@ -39,125 +38,40 @@ func main() {
 		panic(fmt.Sprintf("Failed to process env var: %s", err))
 	}
 
-	//panic(env.dbName)
-
-	cfg := mysql.Cfg("gracegao-knative-testing:us-central1:sqlinstance-mysql", env.DBUser, "")
-	cfg.DBName = env.DBName
-	cfg.ParseTime = true
-
-	const timeout = 10 * time.Second
-	cfg.Timeout = timeout
-	cfg.ReadTimeout = timeout
-	cfg.WriteTimeout = timeout
-
-	db, err := mysql.DialCfg(cfg)
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:@tcp(127.0.0.1:3306)/%s", env.DBUser, env.DBName))
 	if err != nil {
-		panic("couldn't dial: " + err.Error())
+		fmt.Println(err.Error())
 	}
+	fmt.Printf("connected")
 	defer db.Close()
-	var now time.Time
-	fmt.Println(db.QueryRow("SELECT NOW()").Scan(&now))
-	fmt.Println(db.Stats())
-	fmt.Println(now)
-	//_, err := sql.Open("mysql", env.dbUser + ":@/" + env.dbName)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//defer db.Close()
-	//fmt.Sprintf("%v", db.Stats())
-}
 
-//// defaultRetry represents that there will be 4 iterations.
-//// The duration starts from 30s and is multiplied by factor 2.0 for each iteration.
-//var defaultRetry = wait.Backoff{
-//	Steps:    4,
-//	Duration: 30 * time.Second,
-//	Factor:   2.0,
-//	// The sleep at each iteration is the duration plus an additional
-//	// amount chosen uniformly at random from the interval between 0 and jitter*duration.
-//	Jitter: 1.0,
-//}
-//
-//func main() {
-//
-//	var env envConfig
-//	if err := envconfig.Process("", &env); err != nil {
-//		panic(fmt.Sprintf("Failed to process env var: %s", err))
-//	}
-//
-//	brokerURL := env.BrokerURLEnvVar
-//	needRetry := (env.RetryEnvVar == "true")
-//
-//	ceClient, err := kncloudevents.NewDefaultClient(brokerURL)
-//	if err != nil {
-//		fmt.Printf("Unable to create ceClient: %s ", err)
-//	}
-//
-//	// If needRetry is true, repeat sending Event with exponential backoff when there are some specific errors.
-//	// In e2e test, sync problems could cause 404 and 5XX error, retrying those would help reduce flakiness.
-//	success := true
-//	span, err := sendEvent(ceClient, needRetry)
-//	if !cev2.IsACK(err) {
-//		success = false
-//		fmt.Printf("failed to send event: %v", err)
-//	}
-//
-//	if err := writeTerminationMessage(map[string]interface{}{
-//		"success": success,
-//		"traceid": span.SpanContext().TraceID.String(),
-//	}); err != nil {
-//		fmt.Printf("failed to write termination message, %s.\n", err)
-//	}
-//}
-//
-//func sendEvent(ceClient cev2.Client, needRetry bool) (span *trace.Span, err error) {
-//	send := func() error {
-//		ctx := cev2.WithEncodingBinary(context.Background())
-//		ctx, span = trace.StartSpan(ctx, "sender", trace.WithSampler(trace.AlwaysSample()))
-//		defer span.End()
-//		result := ceClient.Send(ctx, sampleCloudEvent())
-//		return result
-//	}
-//
-//	if needRetry {
-//		err = retry.OnError(defaultRetry, isRetryable, send)
-//	} else {
-//		err = send()
-//	}
-//	return
-//}
-//
-//func sampleCloudEvent() cev2.Event {
-//	event := cev2.NewEvent(cev2.VersionV1)
-//	event.SetID(lib.E2ESampleEventID)
-//	event.SetType(lib.E2ESampleEventType)
-//	event.SetSource(lib.E2ESampleEventSource)
-//	event.SetData(cev2.ApplicationJSON, `{"source": "sender!"}`)
-//	return event
-//}
-//
-//func writeTerminationMessage(result interface{}) error {
-//	b, err := json.Marshal(result)
-//	if err != nil {
-//		return err
-//	}
-//	return ioutil.WriteFile("/dev/termination-log", b, 0644)
-//}
-//
-//// isRetryable determines if the err is an error which is retryable
-//func isRetryable(err error) bool {
-//	var result *cehttp.Result
-//	if protocol.ResultAs(err, &result) {
-//		// Potentially retry when:
-//		// - 404 Not Found
-//		// - 500 Internal Server Error, it is currently for reducing flakiness caused by Workload Identity credential sync up.
-//		// We should remove it after https://github.com/google/knative-gcp/issues/1058 lands, as 500 error may indicate bugs in our code.
-//		// - 503 Service Unavailable (with or without Retry-After) (IGNORE Retry-After)
-//		sc := result.StatusCode
-//		if sc == 404 || sc == 500 || sc == 503 {
-//			log.Printf("got error: %s, retry sending event. \n", result.Error())
-//			return true
-//		}
-//	}
-//	return false
-//}
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, age INT, first_name TEXT, last_name TEXT, email TEXT NOT NULL);")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("Table created successfully..")
+	}
+
+	db.Exec("INSERT INTO users (age, email, first_name, last_name) VALUES (30, 'jon@calhoun.io', 'Jonathan', 'Calhoun');")
+	db.Exec("INSERT INTO users (age, email, first_name, last_name) VALUES (52, 'bob@smith.io', 'Bob', 'Smith');")
+	db.Exec("INSERT INTO users (age, email, first_name, last_name) VALUES (15, 'jerryjr123@gmail.com', 'Jerry', 'Seinfeld');")
+
+	sqlStatement := `SELECT id, email FROM users WHERE first_name="Jonathan";`
+	var email string
+	var id int
+	//// Replace 3 with an ID from your database or another random
+	//// value to test the no rows use case.
+	row := db.QueryRow(sqlStatement)
+	switch err := row.Scan(&id, &email); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+	case nil:
+		fmt.Println(id, email)
+	default:
+		panic(err)
+	}
+}
