@@ -18,18 +18,21 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
-	//"time"
-	//
-	//"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
 type envConfig struct {
-	DBName string `envconfig:"DB_NAME" required:"true"`
-	DBUser string `envconfig:"DB_USER" required:"true"`
+	CloudSQL string `envconfig:"CLOUD_SQL" required:"true"`
+}
+
+type SQLInfo struct {
+	dbName string
+	dbUser string
 }
 
 func main() {
@@ -38,7 +41,16 @@ func main() {
 		panic(fmt.Sprintf("Failed to process env var: %s", err))
 	}
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:@tcp(127.0.0.1:3306)/%s", env.DBUser, env.DBName))
+	var sqlInfo map[string]interface{}
+	err := json.Unmarshal([]byte(env.CloudSQL), &sqlInfo)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	fmt.Printf("this is the DB name: %v", sqlInfo["DB_NAME"])
+	fmt.Printf("this is the DB user: %v", sqlInfo["DB_USER"])
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:@tcp(127.0.0.1:3306)/%s", sqlInfo["DB_USER"], sqlInfo["DB_NAME"]))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -63,8 +75,7 @@ func main() {
 	sqlStatement := `SELECT id, email FROM users WHERE first_name="Jonathan";`
 	var email string
 	var id int
-	//// Replace 3 with an ID from your database or another random
-	//// value to test the no rows use case.
+
 	row := db.QueryRow(sqlStatement)
 	switch err := row.Scan(&id, &email); err {
 	case sql.ErrNoRows:
